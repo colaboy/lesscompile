@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0"><meta name="format-detection" content="telephone=no">
+	<title>less编译下载</title>
+</head>
+
+<body>
+	<a href="javascript:submit()">下载</a>
+	<form id="variables"></form>
+	<script src="plugin/jquery/jquery.min.js"></script>
+	<script src="plugin/less/less.min.js"></script>
+    <script>
+    	var cssString="";//最终生成的css字符串
+    	var varLessUrl="assets/less/variables.less";//变量less
+    	var baseLessUrl="assets/less/seedsui.less";//基本less
+    	var container=document.getElementById("variables");//表单
+    	/*===========
+		生成文件
+		============*/
+    	//使用超链接的特性下载文件
+		function downloadFile(fileName, content){
+		    var aLink = document.createElement('a');
+		    var blob = new Blob([content]);
+		    var evt = document.createEvent("HTMLEvents");
+		    evt.initEvent("click", false, false);//initEvent 不加后两个参数在FF下会报错, 感谢 Barret Lee 的反馈
+		    aLink.download = fileName;
+		    aLink.href = URL.createObjectURL(blob);
+		    aLink.dispatchEvent(evt);
+		}
+		//提交
+		function submit(){
+			var varString="";
+			for(var i=0,field;field=container.elements[i++];){
+				//过滤没有name的表单元素
+				if(!field.type || !field.name){
+					continue;
+				}
+				//过滤button、reset、submit
+				if(field.type=="button" || field.type=="reset" || field.type=="submit"){
+					continue;
+				}
+				//过滤未选中的checkbox和radio
+				if(field.type=="radio" || field.type=="checkbox"){
+					if(!field.checked){
+						continue;
+					}
+				}
+				varString+=field.name+":"+field.value+";";
+			}
+			//合成完整的css字符串
+			$.ajax({url:baseLessUrl,context:document.body,
+	    		success:function(data){
+	    			cssString=varString+data;
+			    	less.render(cssString,function (e, css) {
+					    downloadFile('example.css',css.css);
+					});
+				}
+			});
+		}
+		/*===========
+		渲染页面
+		============*/
+		//渲染变量到页面上
+		function renderVariables(str){
+			var minStr=minify(str);
+			var arr=minStr.split(";");
+			var json={};
+			for(var i=0;i<arr.length;i++){
+				var option=arr[i].split(":")
+				createElements(option);
+				json[option[0]]=option[1];
+			}
+		}
+		function createElements(option){
+			var label=document.createElement("label");
+			var input=document.createElement("input");
+			label.innerHTML=option[0];
+			input.setAttribute("type","text");
+			input.setAttribute("name",option[0]);
+			input.setAttribute("value",option[1]);
+
+			container.appendChild(label);
+			container.appendChild(input);
+		}
+		
+		//初始化变量数据
+		function init(){
+			$.ajax({url:varLessUrl,context:document.body,
+	    		success:renderVariables
+			});
+		}
+		/*===========
+		工具方法
+		============*/
+		function clearAnnotate(str){
+			//清除注释/*xxxx*/
+			return str.replace(/\/\*.*\*\//g, "");
+		}
+		function trim(str){
+			return str.replace(/\s/g, "");
+		}
+		function minify(str){
+			//var minStr=trim(str);//trim有问题，会多删东西
+			return clearAnnotate(str);
+		}
+
+		window.onload=init();
+    </script>
+</body>
+</html>
