@@ -13,6 +13,7 @@
 	<script src="plugin/less/less.min.js"></script>
     <script>
     	var cssString="";//最终生成的css字符串
+    	var json={};//存储变量到json中
     	var varLessUrl="assets/less/variables.less";//变量less
     	var baseLessUrl="assets/less/seedsui.less";//基本less
     	var container=document.getElementById("variables");//表单
@@ -31,7 +32,6 @@
 		}
 		//提交
 		function submit(){
-			var varString="";
 			for(var i=0,field;field=container.elements[i++];){
 				//过滤没有name的表单元素
 				if(!field.type || !field.name){
@@ -47,8 +47,9 @@
 						continue;
 					}
 				}
-				varString+=field.name+":"+field.value+";";
+				json[field.name]=field.value;
 			}
+			var varString=jsonToVarstr(json);
 			//合成完整的css字符串
 			$.ajax({url:baseLessUrl,context:document.body,
 	    		success:function(data){
@@ -66,20 +67,24 @@
 		function renderVariables(str){
 			var minStr=minify(str);
 			var arr=minStr.split(";");
-			var json={};
+			
 			for(var i=0;i<arr.length;i++){
-				var option=arr[i].split(":")
-				createElements(option);
-				json[option[0]]=option[1];
+				var option=arr[i].split(":");
+				var fieldName=trim(option[0]);
+				var fieldValue=option[1];
+				if(fieldValue){
+					createElements(fieldName,fieldValue);
+					json[fieldName]=fieldValue;
+				}
 			}
 		}
-		function createElements(option){
+		function createElements(fieldName,fieldValue){
 			var label=document.createElement("label");
 			var input=document.createElement("input");
-			label.innerHTML=option[0];
+			label.innerHTML=fieldName;
 			input.setAttribute("type","text");
-			input.setAttribute("name",option[0]);
-			input.setAttribute("value",option[1]);
+			input.setAttribute("name",fieldName);
+			input.setAttribute("value",fieldValue);
 
 			container.appendChild(label);
 			container.appendChild(input);
@@ -105,7 +110,13 @@
 			//var minStr=trim(str);//trim有问题，会多删东西
 			return clearAnnotate(str);
 		}
-
+		function jsonToVarstr(jsonobj){
+			var str="";
+			for(var jsn in jsonobj){
+			str+=jsn+":"+jsonobj[jsn]+";";
+			}
+			return str.replace(/:undefined;/g,"");
+		}
 		window.onload=init();
     </script>
 </body>
